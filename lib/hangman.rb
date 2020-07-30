@@ -5,7 +5,7 @@ class Hangman
 
   def initialize(dictionary_filename)
     @dict_filename = dictionary_filename
-    @guesses = 6
+    @max_failed_guesses = 6
   end
 
   public
@@ -13,17 +13,51 @@ class Hangman
   def start
     @word_arr = select_random_word.downcase.split('')
     @guess_arr = Array.new(@word_arr.length) { '_' }
+    @current_failed_guess = 0
+    @won = false
 
-    play_round
+    until @won || @current_failed_guess == @max_failed_guesses
+      play_round
+      @won = guess_complete?
+    end
+
+    if @won
+      puts "Your guess was correct! Clap"
+    else
+      puts "Tough luck! The word was : "
+      display_arr(@word_arr)
+    end
   end
 
   private
 
   def play_round
+    display_arr(@guess_arr)
     print "Enter your guess as an alphabet : "
 
     char = get_valid_input(lambda {|x| validate_char_input(x)}, "TRY ANOTHER : ")
-    puts char
+    char_matches = check_and_show_char(char)
+
+    @current_failed_guess += 1 unless char_matches
+  end
+
+  # Checks if char exists in @word, then swaps the '_' with char at the matching positions,
+  # returns true if char exists in @word, otherwise false
+  def check_and_show_char(char)
+    found = false
+    @word_arr.each_with_index do |w_char, w_index|
+      if w_char == char
+        found = true
+        @guess_arr[w_index] = char
+      end
+    end
+    
+    found
+  end
+
+  # Returns true if guess is successfully filled (does not contain '_')
+  def guess_complete?
+    !@guess_arr.include?('_')
   end
 
   # Prints an array in space-separated format
@@ -55,6 +89,7 @@ class Hangman
   def validate_char_input(input)
     input = input.downcase
 
+    raise "Input is empty!" if input == ''
     raise "Input is not a single character!" if input.length > 1
     raise "Non-alphabetic character detected!" if !(input =~ /^-?[a-z]+$/)
 
