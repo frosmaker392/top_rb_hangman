@@ -10,6 +10,7 @@ class Hangman
 
   public
 
+  # Starts a game of Hangman with 6 failed guesses as a fail condition
   def start
     @word_arr = select_random_word.downcase.split('')
     @guess_arr = Array.new(@word_arr.length) { '_' }
@@ -31,6 +32,7 @@ class Hangman
 
   private
 
+  # Plays a 'round' (a guess more or less)
   def play_round
     display_arr(@guess_arr)
     print "Enter your guess as an alphabet : "
@@ -86,6 +88,7 @@ class Hangman
     random_word
   end
 
+  # Validator function to return only valid alphabets
   def validate_char_input(input)
     input = input.downcase
 
