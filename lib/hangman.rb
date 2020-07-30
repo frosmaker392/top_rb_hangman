@@ -3,9 +3,18 @@ require_relative 'console_input'
 class Hangman
   include Input
 
-  def initialize(dictionary_filename)
+  def initialize(dictionary_filename, drawings_list_filename)
     @dict_filename = dictionary_filename
-    @max_failed_guesses = 6
+  
+    drawings_list_file = File.open(drawings_list_filename)
+    @drawings_arr = drawings_list_file.readlines(',')
+    drawings_list_file.close
+
+    @drawings_arr.map! do |drawing_txt|
+      drawing_txt.gsub(',', '') + "\n"
+    end
+
+    @max_failed_guesses = @drawings_arr.length - 1
   end
 
   public
@@ -18,6 +27,8 @@ class Hangman
     @won = false
 
     until @won || @current_failed_guess == @max_failed_guesses
+      print @drawings_arr[@current_failed_guess]
+
       play_round
       @won = guess_complete?
     end
@@ -25,6 +36,7 @@ class Hangman
     if @won
       puts "Your guess was correct! Clap"
     else
+      print @drawings_arr[@current_failed_guess]
       puts "Tough luck! The word was : "
       display_arr(@word_arr)
     end
@@ -100,5 +112,5 @@ class Hangman
   end
 end
 
-hangman = Hangman.new('5desk.txt')
+hangman = Hangman.new('5desk.txt', 'hangman_txt_drawings.txt')
 hangman.start
