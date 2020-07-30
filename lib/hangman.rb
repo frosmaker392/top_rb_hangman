@@ -1,7 +1,24 @@
 require_relative 'console_input'
+require_relative 'jsonable'
+
+class HangmanData < JSONable
+  attr_accessor :word_arr
+  attr_accessor :guess_arr
+  attr_accessor :current_failed_guess
+  attr_accessor :played_chars
+
+  def initialize(word_arr, guess_arr, cur_failed_guess, played_chars)
+    @word_arr = word_arr
+    @guess_arr = guess_arr
+    @current_failed_guess = cur_failed_guess
+    @played_chars = played_chars
+  end
+end
 
 class Hangman
   include Input
+
+  attr_reader :current_hm_data
 
   # dictionary_filename - path of word dictionary to be used, 
   # drawings_list_filename - path of a file containing the hangman drawings
@@ -23,15 +40,7 @@ class Hangman
 
   public
 
-  # Starts a game of Hangman with 6 failed guesses as a fail condition
-  def start
-    @word_arr = select_random_word.downcase.split('')
-    @guess_arr = Array.new(@word_arr.length) { '_' }
-
-    @played_chars = []
-    @current_failed_guess = 0
-    @won = false
-
+  def init
     print %(    ------- Hangman -------    
   How to play : 
  \> You will be shown an empty Hangman drawing and a string of empty spaces \(\'_\'\).
@@ -39,23 +48,46 @@ class Hangman
  \> If your guess is correct then the next guess will reveal where the letter is in the string.
  \> Otherwise a part of the Hangman will be drawn.
  \> If you have #{@max_failed_guesses} wrong guesses then Hangman drawing should be complete and you lose.
- \> You win if you correctly guess all the letters before the drawing is finished.\n\n)
+ \> You win if you correctly guess all the letters before the drawing is finished.
 
-    until @won || @current_failed_guess == @max_failed_guesses
-      print @drawings_arr[@current_failed_guess]
+-- Play a new game or load a save file : 
+1. New Game     2. Load Game    3. Exit
+Enter the corresponding number : )
+    choice = get_valid_input(range_lambda(1..3))
+    if choice == 1
+      word_arr = select_random_word.downcase.split('')
+      guess_arr = Array.new(word_arr.length) { '_' }
+
+      current_failed_guess = 0
+      played_chars = []
+
+      @current_hm_data = HangmanData.new(word_arr, guess_arr, current_failed_guess, played_chars)
+
+      start_game
+    else
+      exit(true)
+    end
+  end
+
+  # Starts a game of Hangman with 6 failed guesses as a fail condition
+  def start_game
+    @won = false
+
+    until @won || @current_hm_data.current_failed_guess == @max_failed_guesses
+      print @drawings_arr[@current_hm_data.current_failed_guess]
 
       play_round
       @won = guess_complete?
     end
 
-    print @drawings_arr[@current_failed_guess]
+    print @drawings_arr[@current_hm_data.current_failed_guess]
 
     if @won
-      display_arr(@word_arr)
+      display_arr(@current_hm_data.word_arr)
       puts "Your guess was correct! Clap"
     else
       puts "Too bad! The word was : "
-      display_arr(@word_arr)
+      display_arr(@current_hm_data.word_arr)
     end
   end
 
@@ -63,24 +95,26 @@ class Hangman
 
   # Plays a 'round' (a guess more or less)
   def play_round
-    display_arr(@guess_arr)
+    display_arr(@current_hm_data.guess_arr)
     print "Enter your guess as an alphabet : "
 
     char = get_valid_input(lambda {|x| validate_char_input(x)}, "Enter an alphabet : ")
+    exit(true) if char == '!save'
+
     char_matches = check_and_show_char(char)
 
-    @played_chars << char
-    @current_failed_guess += 1 unless char_matches
+    @current_hm_data.played_chars << char
+    @current_hm_data.current_failed_guess += 1 unless char_matches
   end
 
   # Checks if char exists in @word, then swaps the '_' with char at the matching positions,
   # returns true if char exists in @word, otherwise false
   def check_and_show_char(char)
     found = false
-    @word_arr.each_with_index do |w_char, w_index|
+    @current_hm_data.word_arr.each_with_index do |w_char, w_index|
       if w_char == char
         found = true
-        @guess_arr[w_index] = char
+        @current_hm_data.guess_arr[w_index] = char
       end
     end
     
@@ -89,7 +123,7 @@ class Hangman
 
   # Returns true if guess is successfully filled (does not contain '_')
   def guess_complete?
-    !@guess_arr.include?('_')
+    !@current_hm_data.guess_arr.include?('_')
   end
 
   # Prints an array in space-separated format
@@ -120,17 +154,19 @@ class Hangman
 
   # Validator function to return only valid alphabets
   def validate_char_input(input)
+    return input if input == '!save'
+
     input = input.downcase
 
     raise "Input is empty!" if input == ''
     raise "Input is not a single character!" if input.length > 1
     raise "Character was not an alphabet!" if !(input =~ /^-?[a-z]+$/)
 
-    raise "You've played that character!" if @played_chars.include?(input)
+    raise "You've played that character!" if @current_hm_data.played_chars.include?(input)
 
     input
   end
 end
 
 hangman = Hangman.new('5desk.txt', 'hangman_txt_drawings.txt')
-hangman.start
+hangman.init
