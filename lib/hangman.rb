@@ -14,13 +14,20 @@ class Hangman
     @word_arr = select_random_word.downcase.split('')
     @guess_arr = Array.new(@word_arr.length) { '_' }
 
-    print_arr(@word_arr)
-    print_arr(@guess_arr)
+    play_round
   end
 
   private
 
-  def print_arr(arr)
+  def play_round
+    print "Enter your guess as an alphabet : "
+
+    char = get_valid_input(lambda {|x| validate_char_input(x)}, "TRY ANOTHER : ")
+    puts char
+  end
+
+  # Prints an array in space-separated format
+  def display_arr(arr)
     arr.each do |element|
       print "#{element} "
     end
@@ -43,6 +50,15 @@ class Hangman
     end
   
     random_word
+  end
+
+  def validate_char_input(input)
+    input = input.downcase
+
+    raise "Input is not a single character!" if input.length > 1
+    raise "Non-alphabetic character detected!" if !(input =~ /^-?[a-z]+$/)
+
+    input
   end
 end
 
