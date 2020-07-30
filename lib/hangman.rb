@@ -5,14 +5,29 @@ class Hangman
 
   def initialize(dictionary_filename)
     @dict_filename = dictionary_filename
+    @guesses = 6
   end
 
   public
 
   def start
-    puts select_random_word
+    @word_arr = select_random_word.downcase.split('')
+    @guess_arr = Array.new(@word_arr.length) { '_' }
+
+    print_arr(@word_arr)
+    print_arr(@guess_arr)
   end
 
+  private
+
+  def print_arr(arr)
+    arr.each do |element|
+      print "#{element} "
+    end
+    print "\n"
+  end
+
+  #Returns a random word of length 5-12 from the dictionary
   def select_random_word
     line_count = `wc -l "#{@dict_filename}"`.strip.split(' ')[0].to_i
   
