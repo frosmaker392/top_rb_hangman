@@ -3,6 +3,9 @@ require_relative 'console_input'
 class Hangman
   include Input
 
+  # dictionary_filename - path of word dictionary to be used, 
+  # drawings_list_filename - path of a file containing the hangman drawings
+  # after each failed guess, comma-separated
   def initialize(dictionary_filename, drawings_list_filename)
     @dict_filename = dictionary_filename
   
@@ -10,6 +13,7 @@ class Hangman
     @drawings_arr = drawings_list_file.readlines(',')
     drawings_list_file.close
 
+    # Remove the commas and add newlines to the end of each drawing
     @drawings_arr.map! do |drawing_txt|
       drawing_txt.gsub(',', '') + "\n"
     end
@@ -23,8 +27,19 @@ class Hangman
   def start
     @word_arr = select_random_word.downcase.split('')
     @guess_arr = Array.new(@word_arr.length) { '_' }
+
+    @played_chars = []
     @current_failed_guess = 0
     @won = false
+
+    print %(    ------- Hangman -------    
+  How to play : 
+ \> You will be shown an empty Hangman drawing and a string of empty spaces \(\'_\'\).
+ \> On each guess, enter an alphabet which you guess is the letter the word contains.
+ \> If your guess is correct then the next guess will reveal where the letter is in the string.
+ \> Otherwise a part of the Hangman will be drawn.
+ \> If you have #{@max_failed_guesses} wrong guesses then Hangman drawing should be complete and you lose.
+ \> You win if you correctly guess all the letters before the drawing is finished.\n\n)
 
     until @won || @current_failed_guess == @max_failed_guesses
       print @drawings_arr[@current_failed_guess]
@@ -33,11 +48,13 @@ class Hangman
       @won = guess_complete?
     end
 
+    print @drawings_arr[@current_failed_guess]
+
     if @won
+      display_arr(@word_arr)
       puts "Your guess was correct! Clap"
     else
-      print @drawings_arr[@current_failed_guess]
-      puts "Tough luck! The word was : "
+      puts "Too bad! The word was : "
       display_arr(@word_arr)
     end
   end
@@ -49,9 +66,10 @@ class Hangman
     display_arr(@guess_arr)
     print "Enter your guess as an alphabet : "
 
-    char = get_valid_input(lambda {|x| validate_char_input(x)}, "TRY ANOTHER : ")
+    char = get_valid_input(lambda {|x| validate_char_input(x)}, "Enter an alphabet : ")
     char_matches = check_and_show_char(char)
 
+    @played_chars << char
     @current_failed_guess += 1 unless char_matches
   end
 
@@ -106,7 +124,9 @@ class Hangman
 
     raise "Input is empty!" if input == ''
     raise "Input is not a single character!" if input.length > 1
-    raise "Non-alphabetic character detected!" if !(input =~ /^-?[a-z]+$/)
+    raise "Character was not an alphabet!" if !(input =~ /^-?[a-z]+$/)
+
+    raise "You've played that character!" if @played_chars.include?(input)
 
     input
   end
