@@ -49,27 +49,45 @@ class Hangman
  \> Otherwise a part of the Hangman will be drawn.
  \> If you have #{@max_failed_guesses} wrong guesses then Hangman drawing should be complete and you lose.
  \> You win if you correctly guess all the letters before the drawing is finished.
+ \> Enter '!save' mid-game to save and quit.
 
 -- Play a new game or load a save file : 
 1. New Game     2. Load Game    3. Exit
 Enter the corresponding number : )
     choice = get_valid_input(range_lambda(1..3))
+    @current_hm_data = default_hm_data 
+
     if choice == 1
-      word_arr = select_random_word.downcase.split('')
-      guess_arr = Array.new(word_arr.length) { '_' }
-
-      current_failed_guess = 0
-      played_chars = []
-
-      @current_hm_data = HangmanData.new(word_arr, guess_arr, current_failed_guess, played_chars)
-
       start_game
+
+    elsif choice == 2
+      begin
+        prompt_load
+        puts "Save loaded!"
+      rescue Exception => e
+        puts e
+        puts 'An error occured, making a new game instead.'
+      ensure
+        start_game
+      end
     else
       exit(true)
     end
   end
 
-  # Starts a game of Hangman with 6 failed guesses as a fail condition
+  private
+
+  def default_hm_data
+    word_arr = select_random_word.downcase.split('')
+    guess_arr = Array.new(word_arr.length) { '_' }
+
+    current_failed_guess = 0
+    played_chars = []
+
+    HangmanData.new(word_arr, guess_arr, current_failed_guess, played_chars)
+  end
+
+  # Starts a game of Hangman with the current data
   def start_game
     @won = false
 
@@ -91,8 +109,6 @@ Enter the corresponding number : )
     end
   end
 
-  private
-
   # Plays a 'round' (a guess more or less)
   def play_round
     display_arr(@current_hm_data.guess_arr)
@@ -105,6 +121,38 @@ Enter the corresponding number : )
 
     @current_hm_data.played_chars << char
     @current_hm_data.current_failed_guess += 1 unless char_matches
+  end
+
+  def prompt_load
+    savefiles_list = Dir['saves/*.json']
+
+    raise "No savefiles found!" if savefiles_list.length == 0
+
+    puts "Choose a savefile : "
+
+    savefiles_list.each_with_index do |savefile, index|
+      puts "#{index+1}. #{savefile[6..-6]}"
+    end
+
+    print "Enter the corresponding number : "
+    selected_index = get_valid_input(range_lambda(1..savefiles_list.length)) - 1
+    
+    savefile_string = File.read(savefiles_list[selected_index])
+    @current_hm_data.from_json!(savefile_string)
+  end
+
+  # Prompts for a save name, serializes the hm_data into a json then exits
+  def prompt_save   
+    print 'Enter a name for your save (alphanumeric only): '
+    save_name = get_valid_input(lambda { |x| validate_alphanumeric(x) })
+    save_file_path = "saves/#{save_name}.json"
+    
+    Dir.mkdir('saves') unless Dir.exists?('saves')
+    File.open(save_file_path, 'w') do |file|
+      file.write(@current_hm_data.to_json)
+    end
+
+    exit(true)
   end
 
   # Checks if char exists in @word, then swaps the '_' with char at the matching positions,
@@ -121,18 +169,7 @@ Enter the corresponding number : )
     found
   end
 
-  def prompt_save
-    print 'Enter a name for your save (alphanumeric only): '
-    save_name = get_valid_input(lambda { |x| validate_alphanumeric(x) })
-    save_file_path = "saves/#{save_name}.json"
-    
-    Dir.mkdir('saves') unless Dir.exists?('saves')
-    File.open(save_file_path, 'w') do |file|
-      file.write(@current_hm_data.to_json)
-    end
-
-    exit(true)
-  end
+  
 
   # Returns true if guess is successfully filled (does not contain '_')
   def guess_complete?
