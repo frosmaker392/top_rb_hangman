@@ -99,7 +99,7 @@ Enter the corresponding number : )
     print "Enter your guess as an alphabet : "
 
     char = get_valid_input(lambda {|x| validate_char_input(x)}, "Enter an alphabet : ")
-    exit(true) if char == '!save'
+    prompt_save if char == '!save'
 
     char_matches = check_and_show_char(char)
 
@@ -119,6 +119,19 @@ Enter the corresponding number : )
     end
     
     found
+  end
+
+  def prompt_save
+    print 'Enter a name for your save (alphanumeric only): '
+    save_name = get_valid_input(lambda { |x| validate_alphanumeric(x) })
+    save_file_path = "saves/#{save_name}.json"
+    
+    Dir.mkdir('saves') unless Dir.exists?('saves')
+    File.open(save_file_path, 'w') do |file|
+      file.write(@current_hm_data.to_json)
+    end
+
+    exit(true)
   end
 
   # Returns true if guess is successfully filled (does not contain '_')
@@ -163,6 +176,13 @@ Enter the corresponding number : )
     raise "Character was not an alphabet!" if !(input =~ /^-?[a-z]+$/)
 
     raise "You've played that character!" if @current_hm_data.played_chars.include?(input)
+
+    input
+  end
+
+  def validate_alphanumeric(input)
+    raise "Input is empty!" if input == ''
+    raise "Some characters are not alphanumeric!" if !(input =~ /^-?[a-zA-Z0-9]+$/)
 
     input
   end
